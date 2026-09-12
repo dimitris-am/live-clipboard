@@ -1,10 +1,30 @@
 import { DurableObject } from "cloudflare:workers";
 import { constantTimeEqual, newPostId, newSessionId } from "../ids";
-import { JOIN_FAILURES_PER_WINDOW, JOIN_WINDOW_MS, POST_WINDOW_MS, POSTS_PER_MINUTE, SESSION_MS } from "../limits";
+import {
+  JOIN_FAILURES_PER_WINDOW,
+  JOIN_WINDOW_MS,
+  MAX_FILE_BYTES,
+  POST_WINDOW_MS,
+  POSTS_PER_MINUTE,
+  ROOM_QUOTA_BYTES,
+  SESSION_MS,
+} from "../limits";
 import { fail, ok, type Fail, type Result } from "../results";
 import { countSince, oldestSince, pruneBefore, record } from "./rate";
 import { migrate } from "./schema";
-import type { Actor, Cred, JoinOk, PostRow, RoomInfo, RoomRow, ServerMessage, SessionRow } from "./types";
+import type {
+  Actor,
+  Cred,
+  FileMeta,
+  FileRef,
+  JoinOk,
+  PostRow,
+  RoomInfo,
+  RoomRow,
+  ServerMessage,
+  SessionRow,
+  UploadGrant,
+} from "./types";
 import { toWirePost } from "./wire";
 
 export class Room extends DurableObject<Env> {
@@ -325,5 +345,60 @@ export class Room extends DurableObject<Env> {
     await this.ctx.storage.deleteAll();
     migrate(this.sql);
     return ok(null);
+  }
+
+  // ── Files ────────────────────────────────────────────────────────────────
+
+  authorizeUpload(cred: Cred, size: number, name: string): Result<UploadGrant> {
+    const gated = this.gate(cred, { write: true });
+    if (!gated.ok) return gated;
+    const { room, actor } = gated.value;
+    if (!Number.isInteger(size) || size < 1) return fail(400, "Choose a file that is not empty");
+    if (size > MAX_FILE_BYTES) return fail(413, "Files can be at most 25 MB");
+    if (room.bytes_used + size > ROOM_QUOTA_BYTES) return fail(413, "This room's file storage is full");
+    const limited = this.takePostSlot(actor);
+    if (limited) return limited;
+    const postId = newPostId();
+    return ok({ postId, r2Key: `rooms/${room.slug}/${postId}/${name}` });
+  }
+
+  commitFile(cred: Cred, meta: FileMeta): Result<{ id: string }> {
+    const gated = this.gate(cred, { write: true });
+    if (!gated.ok) return gated;
+    const { room, actor } = gated.value;
+    if (meta.r2Key !== `rooms/${room.slug}/${meta.postId}/${meta.name}`) {
+      return fail(400, "Upload does not match its grant");
+    }
+    if (room.bytes_used + meta.size > ROOM_QUOTA_BYTES) return fail(413, "This room's file storage is full");
+
+    const [name, role, session, email] = this.authorColumns(actor);
+    this.sql.exec(
+      "INSERT INTO posts (id, kind, file_name, file_size, file_type, r2_key, author_name, author_role, author_session, author_email, created_at) VALUES (?, 'file', ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      meta.postId,
+      meta.name,
+      meta.size,
+      meta.type,
+      meta.r2Key,
+      name,
+      role,
+      session,
+      email,
+      Date.now(),
+    );
+    this.sql.exec("UPDATE room SET bytes_used = bytes_used + ?", meta.size);
+    this.broadcastPost(this.post(meta.postId)!, room.slug);
+    return ok({ id: meta.postId });
+  }
+
+  getFile(cred: Cred, postId: string): Result<FileRef> {
+    const gated = this.gate(cred);
+    if (!gated.ok) return gated;
+    const row = this.post(postId);
+    if (!row || row.kind !== "file" || !row.r2_key) return fail(404, "File not found");
+    return ok({
+      r2Key: row.r2_key,
+      name: row.file_name ?? "file",
+      type: row.file_type ?? "application/octet-stream",
+    });
   }
 }
