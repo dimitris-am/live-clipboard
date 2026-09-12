@@ -1,0 +1,9 @@
+export const MAX_TEXT_CHARS = 20_000;
+export const MAX_FILE_BYTES = 25 * 1024 * 1024;
+export const ROOM_QUOTA_BYTES = 2 * 1024 * 1024 * 1024;
+export const POSTS_PER_MINUTE = 30;
+export const POST_WINDOW_MS = 60 * 1000;
+export const JOIN_FAILURES_PER_WINDOW = 20;
+export const JOIN_WINDOW_MS = 10 * 60 * 1000;
+export const SESSION_MS = 7 * 24 * 60 * 60 * 1000;
+export const MAX_FILE_NAME_CHARS = 120;
