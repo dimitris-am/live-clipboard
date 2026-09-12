@@ -1,3 +1,6 @@
+import { SELF } from "cloudflare:test";
+import { env } from "cloudflare:workers";
+
 export const PUBLIC = "http://localhost:8787";
 export const ADMIN = "http://127.0.0.1:8787";
 /** Matches OWNERS in wrangler.jsonc and DEV_OWNER_EMAIL in vitest.config.ts. */
@@ -66,4 +69,36 @@ export function acceptSocket(res: Response): TestSocket {
     },
   };
   return socket;
+}
+
+function withOrigin(origin: string, init: RequestInit): RequestInit {
+  const headers = new Headers(init.headers);
+  if (!headers.has("Origin")) headers.set("Origin", origin);
+  return { ...init, headers };
+}
+
+/** Request to the participants' door, with a same-origin Origin header unless one is given. */
+export function publicFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return SELF.fetch(`${PUBLIC}${path}`, withOrigin(PUBLIC, init));
+}
+
+/** Request to the owners' door; tests act as OWNER through the development identity. */
+export function adminFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return SELF.fetch(`${ADMIN}${path}`, withOrigin(ADMIN, init));
+}
+
+export async function makeRoom(slug: string, pin = "482913"): Promise<void> {
+  const created = await env.ROOMS.getByName(slug).init({ slug, title: "API room", pin });
+  if (!created.ok) throw new Error(created.error);
+}
+
+/** Joins through the public door and returns the "clip_session=<id>" cookie pair. */
+export async function joinRoom(slug: string, name = "Kristi", ip = "198.51.100.30", pin = "482913"): Promise<string> {
+  const res = await publicFetch(`/r/${slug}/api/join`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "CF-Connecting-IP": ip },
+    body: JSON.stringify({ pin, name }),
+  });
+  if (res.status !== 200) throw new Error(`join failed with ${res.status}: ${await res.text()}`);
+  return res.headers.getSetCookie()[0]!.split(";")[0]!;
 }

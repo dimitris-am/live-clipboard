@@ -27,7 +27,7 @@ describe("harness", () => {
 
   it("reaches the Worker", async () => {
     const res = await SELF.fetch(`${PUBLIC}/`);
-    expect(res.status).toBe(404);
-    await res.body?.cancel();
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('content="home"');
   });
 });
