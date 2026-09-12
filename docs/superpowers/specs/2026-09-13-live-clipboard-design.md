@@ -86,7 +86,9 @@ Principles:
 
 ### 4.4 Local development
 
-`wrangler dev` serves both doors by treating `localhost:8787` as the public host and `127.0.0.1:8787` as the admin host (`PUBLIC_HOST` and `ADMIN_HOST` in `.dev.vars`). Browsers keep their cookies separate. On the admin host, `DEV_OWNER_EMAIL` stands in for the Access token **only** when `ENVIRONMENT` is `development` **and** the request host is `127.0.0.1:8787`. Production config never sets either variable.
+`wrangler dev` serves both doors by treating `localhost:8787` as the public host and `127.0.0.1:8787` as the admin host. Browsers keep their cookies separate.
+
+Those two hosts are the top-level `PUBLIC_HOST` and `ADMIN_HOST` vars in `wrangler.jsonc`. Production hosts and routes live in `env.production`. Verified 2026-09-13: whenever `routes` are configured, `wrangler dev` rewrites every request's host to the route's domain, so the top level must carry no routes. On the admin host, `DEV_OWNER_EMAIL` stands in for the Access token **only** when `ENVIRONMENT` is `development` **and** the request host is `127.0.0.1:8787`. Production config never sets either variable.
 
 ## 5. Data model
 
@@ -357,7 +359,7 @@ Vitest with `@cloudflare/vitest-pool-workers`, which runs the Worker, Room objec
 1. **Probe first**, before any feature work. Deploy a throwaway Worker on `clip-admin.dimitrismitsis.com` behind the Access self-hosted application. It should serve a page that opens a WebSocket echo and prints the `Cf-Access-Jwt-Assertion` it received on the upgrade. Confirm from a browser after signing in, then replace the probe with the real Worker. If WebSockets fail through Access, stop and revisit the owner board. The fallback is to add `GET /r/:slug/api/snapshot` on the admin host, returning the snapshot message's payload, and have the owner board poll it every 3 seconds.
 2. **Resources:** R2 bucket `live-clipboard-files`, D1 database `live-clipboard`, Durable Object migration with `new_sqlite_classes: ["Room"]`.
 3. **`wrangler.jsonc`:**
-   - Custom domains `clip.dimitrismitsis.com` and `clip-admin.dimitrismitsis.com`
+   - Custom domains `clip.dimitrismitsis.com` and `clip-admin.dimitrismitsis.com`, in `env.production`; deploy with `wrangler deploy --env production` (§4.4)
    - `"workers_dev": false`, `"preview_urls": false`
    - Bindings `ROOMS` (Durable Object), `FILES` (R2), `DB` (D1), `ASSETS` (static assets)
 4. **Zero Trust:**
