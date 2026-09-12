@@ -1,10 +1,11 @@
 import { DurableObject } from "cloudflare:workers";
-import { constantTimeEqual, newSessionId } from "../ids";
-import { JOIN_FAILURES_PER_WINDOW, JOIN_WINDOW_MS, SESSION_MS } from "../limits";
-import { fail, ok, type Result } from "../results";
+import { constantTimeEqual, newPostId, newSessionId } from "../ids";
+import { JOIN_FAILURES_PER_WINDOW, JOIN_WINDOW_MS, POST_WINDOW_MS, POSTS_PER_MINUTE, SESSION_MS } from "../limits";
+import { fail, ok, type Fail, type Result } from "../results";
 import { countSince, oldestSince, pruneBefore, record } from "./rate";
 import { migrate } from "./schema";
-import type { Actor, Cred, JoinOk, RoomInfo, RoomRow, SessionRow } from "./types";
+import type { Actor, Cred, JoinOk, PostRow, RoomInfo, RoomRow, ServerMessage, SessionRow } from "./types";
+import { toWirePost } from "./wire";
 
 export class Room extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
@@ -60,6 +61,68 @@ export class Room extends DurableObject<Env> {
         // already closing
       }
     }
+  }
+
+  private post(id: string): PostRow | null {
+    return this.sql.exec<PostRow>("SELECT * FROM posts WHERE id = ?", id).toArray()[0] ?? null;
+  }
+
+  /** [author_name, author_role, author_session, author_email] */
+  private authorColumns(actor: Actor): [string, string, string | null, string | null] {
+    return actor.role === "owner"
+      ? [actor.name, "owner", null, actor.email]
+      : [actor.name, "participant", actor.sessionId, null];
+  }
+
+  /** Records one post or upload, or returns a 429 when the per-minute limit is reached. */
+  private takePostSlot(actor: Actor): Fail | null {
+    const now = Date.now();
+    const since = now - POST_WINDOW_MS;
+    const bucket = actor.role === "owner" ? `post:owner:${actor.email}` : `post:session:${actor.sessionId}`;
+    pruneBefore(this.sql, now - JOIN_WINDOW_MS);
+    if (countSince(this.sql, bucket, since) >= POSTS_PER_MINUTE) {
+      const oldest = oldestSince(this.sql, bucket, since) ?? now;
+      return fail(429, "Too many posts. Wait a moment.", Math.max(1, Math.ceil((oldest + POST_WINDOW_MS - now) / 1000)));
+    }
+    record(this.sql, bucket, now);
+    return null;
+  }
+
+  private broadcast(msg: ServerMessage, except?: WebSocket): void {
+    const data = JSON.stringify(msg);
+    for (const ws of this.ctx.getWebSockets()) {
+      if (ws === except) continue;
+      try {
+        ws.send(data);
+      } catch {
+        // closed between getWebSockets() and send()
+      }
+    }
+  }
+
+  /** Sends post.added to every socket, with `mine` computed for that socket's viewer. */
+  private broadcastPost(row: PostRow, slug: string): void {
+    for (const ws of this.ctx.getWebSockets()) {
+      const viewer = ws.deserializeAttachment() as Actor | null;
+      if (!viewer) continue;
+      const msg: ServerMessage = { type: "post.added", post: toWirePost(row, slug, viewer) };
+      try {
+        ws.send(JSON.stringify(msg));
+      } catch {
+        // closed between getWebSockets() and send()
+      }
+    }
+  }
+
+  private snapshot(room: RoomRow, actor: Actor): ServerMessage {
+    const rows = this.sql.exec<PostRow>("SELECT * FROM posts ORDER BY created_at DESC, rowid DESC").toArray();
+    return {
+      type: "snapshot",
+      room: { slug: room.slug, title: room.title, archived: room.archived === 1 },
+      you: { name: actor.name, role: actor.role },
+      online: this.ctx.getWebSockets().length,
+      posts: rows.map((row) => toWirePost(row, room.slug, actor)),
+    };
   }
 
   // ── Settings and sessions ────────────────────────────────────────────────
@@ -147,6 +210,120 @@ export class Room extends DurableObject<Env> {
     this.sql.exec("UPDATE room SET pin = ?, pin_version = pin_version + 1", pin);
     this.sql.exec("DELETE FROM sessions");
     this.closeSockets((a) => a.role === "participant", 4401, "PIN changed");
+    return ok(null);
+  }
+
+  // ── Live connections ─────────────────────────────────────────────────────
+
+  async fetch(request: Request): Promise<Response> {
+    if (request.headers.get("Upgrade") !== "websocket") {
+      return new Response("Expected WebSocket", { status: 426 });
+    }
+    let cred: Cred;
+    try {
+      cred = JSON.parse(request.headers.get("X-Clip-Cred") ?? "") as Cred;
+    } catch {
+      return new Response("Missing credentials", { status: 400 });
+    }
+    const room = this.room();
+    if (!room) return new Response("Room not found", { status: 404 });
+    const actor = this.resolve(cred, room);
+    if (!actor) return new Response("Your session has ended. Join again.", { status: 401 });
+
+    const { 0: client, 1: server } = new WebSocketPair();
+    this.ctx.acceptWebSocket(server);
+    server.serializeAttachment(actor);
+    server.send(JSON.stringify(this.snapshot(room, actor)));
+    this.broadcast({ type: "online", count: this.ctx.getWebSockets().length });
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  async webSocketMessage(): Promise<void> {
+    // Clients send nothing; every change arrives over HTTP.
+  }
+
+  async webSocketClose(ws: WebSocket): Promise<void> {
+    const count = this.ctx.getWebSockets().filter((socket) => socket !== ws).length;
+    this.broadcast({ type: "online", count }, ws);
+  }
+
+  // ── Posts ────────────────────────────────────────────────────────────────
+
+  addText(cred: Cred, text: string): Result<{ id: string }> {
+    const gated = this.gate(cred, { write: true });
+    if (!gated.ok) return gated;
+    const { room, actor } = gated.value;
+    const limited = this.takePostSlot(actor);
+    if (limited) return limited;
+
+    const id = newPostId();
+    const [name, role, session, email] = this.authorColumns(actor);
+    this.sql.exec(
+      "INSERT INTO posts (id, kind, text, author_name, author_role, author_session, author_email, created_at) VALUES (?, 'text', ?, ?, ?, ?, ?, ?)",
+      id,
+      text,
+      name,
+      role,
+      session,
+      email,
+      Date.now(),
+    );
+    this.broadcastPost(this.post(id)!, room.slug);
+    return ok({ id });
+  }
+
+  async deletePost(cred: Cred, id: string): Promise<Result<null>> {
+    const gated = this.gate(cred);
+    if (!gated.ok) return gated;
+    const { room, actor } = gated.value;
+    const row = this.post(id);
+    if (!row) return fail(404, "Post not found");
+    if (actor.role !== "owner") {
+      if (row.author_session !== actor.sessionId) return fail(403, "You can only delete your own posts");
+      if (room.archived) return fail(409, "This room is archived");
+    }
+
+    this.sql.exec("DELETE FROM posts WHERE id = ?", id);
+    if (row.kind === "file") {
+      this.sql.exec("UPDATE room SET bytes_used = MAX(0, bytes_used - ?)", row.file_size ?? 0);
+      if (row.r2_key) {
+        try {
+          await this.env.FILES.delete(row.r2_key);
+        } catch (err) {
+          console.error("R2 delete failed", row.r2_key, err);
+        }
+      }
+    }
+    this.broadcast({ type: "post.deleted", id });
+    return ok(null);
+  }
+
+  setPinned(cred: Cred, id: string, pinned: boolean): Result<null> {
+    const gated = this.gate(cred, { owner: true });
+    if (!gated.ok) return gated;
+    if (!this.post(id)) return fail(404, "Post not found");
+    const pinnedAt = pinned ? Date.now() : null;
+    this.sql.exec("UPDATE posts SET pinned = ?, pinned_at = ? WHERE id = ?", pinned ? 1 : 0, pinnedAt, id);
+    this.broadcast({ type: "post.pinned", id, pinned, pinnedAt });
+    return ok(null);
+  }
+
+  update(cred: Cred, patch: { title?: string; archived?: boolean }): Result<null> {
+    const gated = this.gate(cred, { owner: true });
+    if (!gated.ok) return gated;
+    if (patch.title !== undefined) this.sql.exec("UPDATE room SET title = ?", patch.title);
+    if (patch.archived !== undefined) this.sql.exec("UPDATE room SET archived = ?", patch.archived ? 1 : 0);
+    const room = this.room()!;
+    this.broadcast({ type: "room.updated", room: { title: room.title, archived: room.archived === 1 } });
+    return ok(null);
+  }
+
+  /** Owner-only and idempotent. The Worker removes R2 files and the D1 row afterwards. */
+  async destroy(cred: Cred): Promise<Result<null>> {
+    if (cred.kind !== "owner") return fail(403, "Only owners can do that");
+    this.closeSockets(() => true, 4404, "Room deleted");
+    await this.ctx.storage.deleteAll();
+    migrate(this.sql);
     return ok(null);
   }
 }
