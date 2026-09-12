@@ -208,6 +208,24 @@ describe("participant API", () => {
     const deleted = await publicFetch(`/r/api-delete/api/posts/${id}`, { method: "DELETE", headers: { Cookie: cookie } });
     expect(deleted.status).toBe(204);
   });
+
+  it("does not reveal whether a room exists to a made-up session", async () => {
+    await makeRoom("api-exists");
+    const cookie = `clip_session=${"0".repeat(32)}`;
+
+    const exists = await publicFetch("/r/api-exists/api/me", { headers: { Cookie: cookie } });
+    const missing = await publicFetch("/r/api-nowhere-else/api/me", { headers: { Cookie: cookie } });
+    expect(exists.status).toBe(401);
+    expect(missing.status).toBe(401);
+    expect(await exists.json()).toEqual({ error: "Your session has ended. Join again." });
+    expect(await missing.json()).toEqual({ error: "Your session has ended. Join again." });
+
+    const upgrade = await publicFetch("/r/api-nowhere-else/api/live", {
+      headers: { Upgrade: "websocket", Cookie: cookie },
+    });
+    expect(upgrade.status).toBe(401);
+    await upgrade.body?.cancel();
+  });
 });
 
 describe("owner API on the admin door", () => {

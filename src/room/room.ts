@@ -63,7 +63,10 @@ export class Room extends DurableObject<Env> {
     opts: { owner?: boolean; write?: boolean } = {},
   ): Result<{ room: RoomRow; actor: Actor }> {
     const room = this.room();
-    if (!room) return fail(404, "Room not found");
+    if (!room) {
+      // A made-up session cookie must not distinguish a missing room from an ended session.
+      return cred.kind === "session" ? fail(401, "Your session has ended. Join again.") : fail(404, "Room not found");
+    }
     const actor = this.resolve(cred, room);
     if (!actor) return fail(401, "Your session has ended. Join again.");
     if (opts.owner && actor.role !== "owner") return fail(403, "Only owners can do that");
@@ -246,7 +249,12 @@ export class Room extends DurableObject<Env> {
       return new Response("Missing credentials", { status: 400 });
     }
     const room = this.room();
-    if (!room) return new Response("Room not found", { status: 404 });
+    if (!room) {
+      // A made-up session cookie must not distinguish a missing room from an ended session.
+      return cred.kind === "session"
+        ? new Response("Your session has ended. Join again.", { status: 401 })
+        : new Response("Room not found", { status: 404 });
+    }
     const actor = this.resolve(cred, room);
     if (!actor) return new Response("Your session has ended. Join again.", { status: 401 });
 
