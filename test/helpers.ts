@@ -95,7 +95,7 @@ export async function makeRoom(slug: string, pin = "482913"): Promise<void> {
 
 /** Joins through the public door and returns the "clip_session=<id>" cookie pair. */
 export async function joinRoom(slug: string, name = "Kristi", ip = "198.51.100.30", pin = "482913"): Promise<string> {
-  const res = await publicFetch(`/r/${slug}/api/join`, {
+  const res = await publicFetch(`/${slug}/api/join`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "CF-Connecting-IP": ip },
     body: JSON.stringify({ pin, name }),

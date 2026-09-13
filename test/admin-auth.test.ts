@@ -44,7 +44,7 @@ describe("admin door without the dev identity", () => {
 
   it("requires Owner sign-in for a live WebSocket upgrade", async () => {
     const res = await fetchAsNobody(
-      new Request(`${ADMIN}/r/any-room/api/live`, {
+      new Request(`${ADMIN}/any-room/api/live`, {
         headers: { Upgrade: "websocket", Origin: ADMIN },
       }),
     );
@@ -70,7 +70,7 @@ describe("admin door without the dev identity", () => {
 
   it("rejects a forged Access assertion for a live WebSocket upgrade", async () => {
     const res = await fetchAsNobody(
-      new Request(`${ADMIN}/r/any-room/api/live`, {
+      new Request(`${ADMIN}/any-room/api/live`, {
         headers: { Upgrade: "websocket", Origin: ADMIN, "Cf-Access-Jwt-Assertion": "a.b.c" },
       }),
     );

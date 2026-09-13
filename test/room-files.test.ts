@@ -48,7 +48,7 @@ describe("room files", () => {
         name: "report.pdf",
         size: 1234,
         type: "application/pdf",
-        url: `/r/files-commit/files/${grant.value.postId}`,
+        url: `/files-commit/files/${grant.value.postId}`,
       },
       mine: true,
     });

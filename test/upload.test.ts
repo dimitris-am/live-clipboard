@@ -8,7 +8,7 @@ import { uploadFile, type UploadRoom } from "../src/upload";
 const cred: Cred = { kind: "session", sessionId: "a".repeat(32) };
 
 function uploadRequest(bytes: Uint8Array, name = "notes.txt"): Request {
-  return new Request("http://localhost:8787/r/upload-unit/api/files", {
+  return new Request("http://localhost:8787/upload-unit/api/files", {
     method: "POST",
     headers: {
       "Content-Type": "text/plain; charset=utf-8",

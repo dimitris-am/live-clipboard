@@ -58,6 +58,19 @@ describe("admin rooms API", () => {
     await res.body?.cancel();
   });
 
+  it("refuses reserved slugs and still serves /api/rooms", async () => {
+    const asApi = await create("api");
+    expect(asApi.status).toBe(400);
+    expect(await asApi.json()).toEqual({ error: "That room name is reserved" });
+
+    const asAssets = await create("assets");
+    expect(asAssets.status).toBe(400);
+    expect(await asAssets.json()).toEqual({ error: "That room name is reserved" });
+
+    const rooms = await listRooms();
+    expect(rooms.some((r) => r.slug === "api" || r.slug === "assets")).toBe(false);
+  });
+
   it("tells the admin page where the public door is", async () => {
     expect(await (await adminFetch("/api/config")).json()).toEqual({ publicOrigin: "http://localhost:8787" });
   });
@@ -76,7 +89,7 @@ describe("admin rooms API", () => {
     await create("admin-newpin");
     const cookie = await joinRoom("admin-newpin");
     expect((await adminFetch("/api/rooms/admin-newpin/pin", send("PUT", { pin: "777777" }))).status).toBe(204);
-    const me = await publicFetch("/r/admin-newpin/api/me", { headers: { Cookie: cookie } });
+    const me = await publicFetch("/admin-newpin/api/me", { headers: { Cookie: cookie } });
     expect(me.status).toBe(401);
     await me.body?.cancel();
     expect(await joinRoom("admin-newpin", "Kristi", "198.51.100.31", "777777")).toMatch(/^clip_session=/);
