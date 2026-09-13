@@ -207,6 +207,14 @@ describe("live board", () => {
     expect((await stub("live-rate").addText(owner, "owner unaffected")).ok).toBe(true);
   });
 
+  it("answers a heartbeat ping with pong, so the client can detect dead connections", async () => {
+    await createRoom("live-heartbeat");
+    const kristi = await joinAs("live-heartbeat", "Kristi");
+    const a = await connect("live-heartbeat", kristi);
+    a.ws.send("ping");
+    expect(await a.nextOfType("pong", 500)).toEqual({ type: "pong" });
+  });
+
   it("destroy closes sockets with 4404, forgets the room and is idempotent", async () => {
     await createRoom("live-destroy");
     const kristi = await joinAs("live-destroy", "Kristi");

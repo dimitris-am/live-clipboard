@@ -41,7 +41,8 @@ export function acceptSocket(res: Response): TestSocket {
   const closedPromise = new Promise<{ code: number; reason: string }>((r) => (resolveClosed = r));
 
   ws.addEventListener("message", (event) => {
-    const msg = JSON.parse(event.data as string) as Msg;
+    // The runtime's WebSocket auto-response answers "ping" with a raw "pong" frame, not JSON.
+    const msg: Msg = event.data === "pong" ? { type: "pong" } : (JSON.parse(event.data as string) as Msg);
     const waiter = waiters.shift();
     if (waiter) waiter(msg);
     else queue.push(msg);

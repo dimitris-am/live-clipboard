@@ -30,6 +30,7 @@ import { toWirePost } from "./wire";
 export class Room extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
     ctx.blockConcurrencyWhile(async () => {
       migrate(this.ctx.storage.sql);
     });
@@ -267,7 +268,7 @@ export class Room extends DurableObject<Env> {
   }
 
   async webSocketMessage(): Promise<void> {
-    // Clients send nothing; every change arrives over HTTP.
+    // Clients send only the heartbeat "ping", which the runtime answers; every change arrives over HTTP.
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
