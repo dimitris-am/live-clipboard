@@ -2,8 +2,53 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="clip-page" content="admin">
-<title>Live Clipboard</title>
+<title>Rooms · Live Clipboard</title>
+<link rel="stylesheet" href="/assets/app.css">
+<script type="module" src="/assets/admin.js"></script>
 </head>
-<body></body>
+<body>
+<header class="bar"><h1>Live Clipboard rooms</h1></header>
+<main class="page wide">
+  <section id="expired" class="banner" hidden>
+    <p>Session expired — sign in again.</p>
+    <button id="reload" type="button">Reload</button>
+  </section>
+
+  <section>
+    <h2>New room</h2>
+    <form id="create-form" class="stack">
+      <label>Slug
+        <input id="create-slug" required maxlength="40" placeholder="agna-2026" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </label>
+      <label>Title
+        <input id="create-title" required maxlength="80" placeholder="Claude Code at AGNA">
+      </label>
+      <label>PIN
+        <span class="pin-field">
+          <input id="create-pin" required maxlength="12" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button id="create-generate" type="button">Generate</button>
+        </span>
+      </label>
+      <p id="create-error" class="error" hidden></p>
+      <div><button class="primary" type="submit">Create room</button></div>
+    </form>
+  </section>
+
+  <section>
+    <h2>Rooms</h2>
+    <p id="rooms-empty" class="muted" hidden>No rooms yet.</p>
+    <div class="table-wrap">
+      <table id="rooms-table" hidden>
+        <thead>
+          <tr><th>Room</th><th>PIN</th><th>People</th><th>Posts</th><th>Files</th><th>Created</th></tr>
+        </thead>
+        <tbody id="rooms"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
 </html>
