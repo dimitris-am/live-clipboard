@@ -5131,6 +5131,7 @@ Both lists must match. The Worker checks `OWNERS` even after Access lets someone
 - **Room:** create it on the admin page and choose a PIN, so it can go on a slide in advance. Put the public link and the PIN on the slide.
 - **Pins:** post and pin the first links, such as the practice repository.
 - **Fallback:** keep a HackMD note with editing open to everyone, in case the venue network or the service fails.
+- **WAF:** Check the WAF join rate-limit rule is enabled.
 
 ## During
 
@@ -5155,7 +5156,7 @@ Both lists must match. The Worker checks `OWNERS` even after Access lets someone
 
 - [ ] **Step 7: HAND OVER to Dimitris for the production check**
 
-Ask Dimitris to run the "Manual check after each deploy" list from `README.md` on a phone and a laptop. Add "file upload in the browser" if Task 12 Step 5 skipped it. He reports each item as pass or fail. **Any fail stops the task.** Debug with `superpowers:systematic-debugging` before continuing.
+Ask Dimitris to run the "Manual check after each deploy" list from `README.md` on a phone and a laptop. Add "file upload in the browser" if Task 12 Step 5 skipped it. Also add: "Leave the owner board open past the Access session length (or revoke the session in Zero Trust), and confirm it shows 'Session expired — sign in again' rather than looping." He reports each item as pass or fail. **Any fail stops the task.** Debug with `superpowers:systematic-debugging` before continuing.
 
 - [ ] **Step 8: Create the AGNA room**
 
@@ -5186,6 +5187,13 @@ Append to `docs/deploy-notes.md`:
 ```
 
 Replace `YYYY-MM-DD` and `<uuid>` with the real values. Leave no placeholders.
+
+- [ ] **Step 9b: Rate-limit joins at the edge**
+
+Ask Dimitris to add a Cloudflare WAF rate-limiting rule in the `dimitrismitsis.com` zone:
+- **Matches:** `http.host eq "clip.dimitrismitsis.com" and ends_with(http.request.uri.path, "/api/join")`
+- **Limit:** 30 requests per 10 seconds per IP
+- **Action:** block for 60 seconds
 
 - [ ] **Step 10: Commit**
 
