@@ -3,7 +3,9 @@ import type { Fail } from "./results";
 export const SESSION_COOKIE = "clip_session";
 
 export function json(body: unknown, status = 200, headers?: HeadersInit): Response {
-  return Response.json(body, { status, headers });
+  const merged = new Headers(headers);
+  merged.set("X-Content-Type-Options", "nosniff");
+  return Response.json(body, { status, headers: merged });
 }
 
 export function notFound(): Response {

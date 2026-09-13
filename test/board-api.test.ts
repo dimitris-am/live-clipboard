@@ -53,6 +53,7 @@ describe("joining through the public door", () => {
     expect(res.headers.getSetCookie()[0]).toMatch(
       /^clip_session=[0-9a-f]{32}; Path=\/r\/api-join; HttpOnly; Secure; SameSite=Lax; Max-Age=604800$/,
     );
+    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
   });
 
   it("answers a wrong PIN and an unknown room identically", async () => {
@@ -129,6 +130,7 @@ describe("participant API", () => {
     const anonymous = await publicFetch("/r/api-me/api/me");
     expect(anonymous.status).toBe(401);
     expect(await anonymous.json()).toEqual({ error: "Join the room first" });
+    expect(anonymous.headers.get("X-Content-Type-Options")).toBe("nosniff");
 
     const forged = await publicFetch("/r/api-me/api/posts", {
       ...json({ text: "hi" }),
