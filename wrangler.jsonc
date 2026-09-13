@@ -22,7 +22,7 @@
     {
       "binding": "DB",
       "database_name": "live-clipboard",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "14f45d61-61f9-453a-9cd2-fa9daa07f580",
       "migrations_dir": "migrations"
     }
   ],
@@ -48,7 +48,7 @@
         {
           "binding": "DB",
           "database_name": "live-clipboard",
-          "database_id": "00000000-0000-0000-0000-000000000000",
+          "database_id": "14f45d61-61f9-453a-9cd2-fa9daa07f580",
           "migrations_dir": "migrations"
         }
       ],
