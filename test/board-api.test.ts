@@ -91,6 +91,24 @@ describe("joining through the public door", () => {
     expect(await limited.json()).toMatchObject({ error: "Too many attempts" });
   });
 
+  it("keys IPv6 join failures by /64, so rotating the suffix does not evade the limit", async () => {
+    await makeRoom("api-limit-v6");
+    const attempt = (ip: string) =>
+      publicFetch("/r/api-limit-v6/api/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "CF-Connecting-IP": ip },
+        body: JSON.stringify({ pin: "000000", name: "x" }),
+      });
+    for (let i = 0; i < 20; i++) {
+      const res = await attempt("2001:db8:1:2::1");
+      expect(res.status).toBe(403);
+      await res.body?.cancel();
+    }
+    const limited = await attempt("2001:db8:1:2::ffff");
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toMatchObject({ error: "Too many attempts" });
+  });
+
   it("does not offer joining on the admin door", async () => {
     await makeRoom("api-adminjoin");
     const res = await adminFetch("/r/api-adminjoin/api/join", json({ pin: "482913", name: "Kristi" }));

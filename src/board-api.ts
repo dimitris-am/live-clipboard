@@ -11,6 +11,7 @@ import {
   sessionCookie,
 } from "./http";
 import { isSessionId } from "./ids";
+import { rateLimitAddress } from "./net";
 import type { Owner } from "./owners";
 import type { Result } from "./results";
 import { ownerCred, type Cred, type UploadGrant } from "./room/types";
@@ -53,7 +54,7 @@ export async function handleBoard(request: Request, env: Env, ctx: BoardContext)
     const name = parseName(body?.name);
     if (!name) return json({ error: "Enter a name of 1 to 40 characters" }, 400);
     const pin = typeof body?.pin === "string" ? body.pin : "";
-    const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
+    const ip = rateLimitAddress(request.headers.get("CF-Connecting-IP"));
     const joined = await room.join({ pin, name, ip });
     if (!joined.ok) return errorResponse(joined);
     return json({ name: joined.value.name }, 200, {
