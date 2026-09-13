@@ -2,7 +2,10 @@
 
 ## Cloudflare Access
 
-Zero Trust is not set up yet: no team, no login methods, and no Access application. `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` in `env.production.vars` (`wrangler.jsonc`) are still placeholders (`https://TEAM.cloudflareaccess.com` and `AUD_TAG_FROM_DEPLOY_NOTES`) pending Dimitris setting up Zero Trust and the Access application for `clip-admin.dimitrismitsis.com`. Until then, the admin door fails closed (401 `{"error":"Owner sign-in required"}`) for everyone. Update these two values and redeploy once Access is configured.
+- ACCESS_TEAM_DOMAIN: https://cheapy.cloudflareaccess.com
+- ACCESS_AUD: d29190a14b34ae309ae1240905a93f9e3ee14671a487b2deea7ffef59a6465d0
+- Access application on clip-admin.dimitrismitsis.com, created by Dimitris 2026-09-13 (self-hosted, policy Owners → mitsosmitsis@gmail.com, login method One-time PIN)
+- Verified 2026-09-13: team certs endpoint returns 2 RS256 keys; clip-admin redirects to cheapy.cloudflareaccess.com
 
 ## Production (deployed in Task 13, 2026-09-13)
 
@@ -10,6 +13,7 @@ Zero Trust is not set up yet: no team, no login methods, and no Access applicati
 - R2 bucket: live-clipboard-files
 - D1 database: live-clipboard, database_id 14f45d61-61f9-453a-9cd2-fa9daa07f580
 - Probe Worker clip-probe: never deployed (Ruling R7)
+- Deployed version b5552c1c-6fad-4dba-9f14-9bc808110a0f, 2026-09-13 (Cloudflare Access values configured)
 - Manual production check: pending (needs Access)
 - Room agna-2026: not created yet (needs Access)
 - Automated smoke check (2026-09-13):

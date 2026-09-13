@@ -56,8 +56,8 @@
         "PUBLIC_HOST": "clip.dimitrismitsis.com",
         "ADMIN_HOST": "clip-admin.dimitrismitsis.com",
         "OWNERS": "{\"mitsosmitsis@gmail.com\":\"Dimitris\"}",
-        "ACCESS_TEAM_DOMAIN": "https://TEAM.cloudflareaccess.com",
-        "ACCESS_AUD": "AUD_TAG_FROM_DEPLOY_NOTES"
+        "ACCESS_TEAM_DOMAIN": "https://cheapy.cloudflareaccess.com",
+        "ACCESS_AUD": "d29190a14b34ae309ae1240905a93f9e3ee14671a487b2deea7ffef59a6465d0"
       }
     }
   }
