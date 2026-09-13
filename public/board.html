@@ -2,8 +2,64 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="clip-page" content="board">
 <title>Live Clipboard</title>
+<link rel="stylesheet" href="/assets/app.css">
+<script type="module" src="/assets/board.js"></script>
 </head>
-<body></body>
+<body>
+<header class="bar">
+  <h1 id="room-title">Live Clipboard</h1>
+  <span id="status" class="status" data-state="connecting" hidden>Connecting…</span>
+  <span id="online" class="muted" hidden></span>
+  <span id="you" hidden></span>
+  <button id="leave" class="link" type="button" hidden>Leave</button>
+</header>
+
+<main class="page">
+  <section id="join" class="narrow" hidden>
+    <h2 id="join-heading">Join</h2>
+    <form id="join-form" class="stack">
+      <label>Room PIN
+        <input id="join-pin" required maxlength="12" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      </label>
+      <label>Your name
+        <input id="join-name" required maxlength="40" autocomplete="nickname">
+      </label>
+      <p id="join-error" class="error" hidden></p>
+      <div><button id="join-submit" class="primary" type="submit">Join</button></div>
+    </form>
+  </section>
+
+  <section id="expired" class="banner" hidden>
+    <p>Session expired — sign in again.</p>
+    <button id="reload" type="button">Reload</button>
+  </section>
+
+  <section id="gone" hidden>
+    <p>This room no longer exists.</p>
+  </section>
+
+  <section id="board" hidden>
+    <p id="archived-banner" class="banner" hidden>This room is archived. It is read-only.</p>
+    <form id="composer" class="composer">
+      <textarea id="composer-text" rows="3" placeholder="Paste, type, or drop a file…" aria-label="New post"></textarea>
+      <div class="composer-actions">
+        <label class="button-link">Attach file<input id="file-input" type="file" multiple hidden></label>
+        <span class="muted">⌘/Ctrl + Enter</span>
+        <button id="composer-submit" class="primary" type="submit">Post</button>
+      </div>
+    </form>
+    <ul id="uploads" class="uploads"></ul>
+    <h2 id="pinned-heading" class="section" hidden>Pinned</h2>
+    <ol id="pinned" class="posts"></ol>
+    <h2 class="section">Feed</h2>
+    <p id="empty" class="muted" hidden>Nothing here yet.</p>
+    <ol id="feed" class="posts"></ol>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
 </html>
