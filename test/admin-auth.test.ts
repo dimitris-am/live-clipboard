@@ -12,19 +12,21 @@ const ADMIN = "http://127.0.0.1:8787";
  * the real 401 path (spec §11). Build an env without it and call the
  * Worker's own fetch() directly, bypassing SELF (which always uses the
  * suite's bindings).
+ *
+ * A plain object spread carries every binding through in this pool (verified
+ * 2026-09-13): `{ ...env, ENVIRONMENT: undefined }` really does remove the
+ * dev identity below, rather than leaving the getter's original value.
  */
-function noDevIdentityEnv(): typeof env {
-  const spread = { ...env, ENVIRONMENT: undefined };
-  if (spread.ENVIRONMENT !== undefined) {
-    // A plain spread didn't carry through; fall back to Object.assign.
-    return Object.assign({}, env, { ENVIRONMENT: undefined });
-  }
-  return spread;
+function noDevIdentityEnv(): Env {
+  return { ...env, ENVIRONMENT: undefined } as unknown as Env;
 }
+
+type PlainFetchHandler = (request: Request, env: Env, ctx: ExecutionContext) => Response | Promise<Response>;
 
 async function fetchAsNobody(request: Request): Promise<Response> {
   const ctx = createExecutionContext();
-  return worker.fetch(request, noDevIdentityEnv(), ctx);
+  const fetch = worker.fetch as unknown as PlainFetchHandler;
+  return fetch(request, noDevIdentityEnv(), ctx);
 }
 
 describe("admin door without the dev identity", () => {
