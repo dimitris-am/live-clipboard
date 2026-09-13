@@ -2,6 +2,8 @@ import { api, el, formatBytes, relativeTime, splitLinks, toast } from "./common.
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const INLINE_IMAGES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+const PING_INTERVAL_MS = 25_000;
+const PONG_TIMEOUT_MS = 10_000;
 
 const slug = decodeURIComponent(location.pathname.split("/")[2] ?? "");
 const base = `/r/${slug}`;
@@ -16,6 +18,8 @@ const state = {
   socket: null,
   failures: 0,
   retryTimer: 0,
+  pingTimer: 0,
+  pongTimer: 0,
   stopped: true,
 };
 
@@ -35,6 +39,7 @@ function show(view) {
 function stopLive() {
   state.stopped = true;
   clearTimeout(state.retryTimer);
+  stopHeartbeat();
   if (state.socket) {
     const socket = state.socket;
     state.socket = null;
@@ -80,6 +85,26 @@ function setStatus(name, label) {
 
 // ── Live connection ────────────────────────────────────────────────────────
 
+/** Sends "ping" every 25s; if no "pong" answers within 10s, the socket is presumed dead. */
+function startHeartbeat(socket) {
+  stopHeartbeat();
+  state.pingTimer = setInterval(() => {
+    if (state.socket !== socket) return;
+    socket.send("ping");
+    clearTimeout(state.pongTimer);
+    state.pongTimer = setTimeout(() => {
+      if (state.socket === socket) socket.close();
+    }, PONG_TIMEOUT_MS);
+  }, PING_INTERVAL_MS);
+}
+
+function stopHeartbeat() {
+  clearInterval(state.pingTimer);
+  state.pingTimer = 0;
+  clearTimeout(state.pongTimer);
+  state.pongTimer = 0;
+}
+
 function connect() {
   clearTimeout(state.retryTimer);
   if (state.stopped) return;
@@ -91,8 +116,13 @@ function connect() {
   socket.onopen = () => {
     state.failures = 0;
     setStatus("live", "Live");
+    startHeartbeat(socket);
   };
   socket.onmessage = (event) => {
+    if (event.data === "pong") {
+      clearTimeout(state.pongTimer);
+      return;
+    }
     try {
       handle(JSON.parse(event.data));
     } catch (err) {
@@ -100,6 +130,7 @@ function connect() {
     }
   };
   socket.onclose = (event) => {
+    stopHeartbeat();
     if (state.socket !== socket) return; // closed on purpose by stopLive()
     state.socket = null;
     if (event.code === 4401) return showJoin("Your session ended. Join again.");
@@ -316,6 +347,10 @@ function canUpload() {
   return !$("board").hidden && state.room && !state.room.archived;
 }
 
+function uploadBlockedMessage() {
+  return state.room?.archived ? "This room is archived. It is read-only." : "Join the room to share files.";
+}
+
 function startUpload(file) {
   const progress = el("progress", { max: "100", value: "0" });
   const row = el("li", { class: "upload" }, [el("span", { text: `${file.name} · ${formatBytes(file.size)}` }), progress]);
@@ -396,13 +431,14 @@ composerText.addEventListener("keydown", (event) => {
 });
 
 document.addEventListener("paste", (event) => {
-  if ($("board").hidden) return;
   const files = [...(event.clipboardData?.files ?? [])];
   if (files.length > 0) {
     event.preventDefault();
+    if (!canUpload()) return toast(uploadBlockedMessage());
     uploadFiles(files);
     return;
   }
+  if ($("board").hidden) return;
   const target = event.target instanceof Element ? event.target : null;
   if (!target || target === composerText || ["INPUT", "TEXTAREA"].includes(target.tagName)) return;
   if ($("composer").hidden) return;
@@ -421,10 +457,9 @@ $("file-input").addEventListener("change", (event) => {
 });
 
 document.addEventListener("dragover", (event) => {
-  if (canUpload() && event.dataTransfer?.types.includes("Files")) {
-    event.preventDefault();
-    document.body.classList.add("dropping");
-  }
+  if (!event.dataTransfer?.types.includes("Files")) return;
+  event.preventDefault();
+  if (canUpload()) document.body.classList.add("dropping");
 });
 document.addEventListener("dragleave", (event) => {
   if (event.relatedTarget === null) document.body.classList.remove("dropping");
@@ -434,6 +469,7 @@ document.addEventListener("drop", (event) => {
   const files = [...(event.dataTransfer?.files ?? [])];
   if (files.length === 0) return;
   event.preventDefault();
+  if (!canUpload()) return toast(uploadBlockedMessage());
   uploadFiles(files);
 });
 
