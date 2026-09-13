@@ -46,6 +46,9 @@ describe("parseName", () => {
     expect(parseName("Kri" + String.fromCharCode(0) + "sti")).toBeNull();
     expect(parseName(null)).toBeNull();
   });
+  it("rejects invisible formatting characters, such as a direction override", () => {
+    expect(parseName("Kri" + String.fromCharCode(0x202e) + "sti")).toBeNull();
+  });
 });
 
 describe("parsePostText", () => {

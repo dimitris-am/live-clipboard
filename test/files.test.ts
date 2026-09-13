@@ -12,6 +12,9 @@ describe("sanitizeFileName", () => {
     expect(sanitizeFileName("..hidden")).toBe("hidden");
     expect(sanitizeFileName("bad" + String.fromCharCode(0, 31, 127) + "name.txt")).toBe("badname.txt");
   });
+  it("strips invisible formatting characters, such as a direction override spoofing an extension", () => {
+    expect(sanitizeFileName("photo" + String.fromCharCode(0x202e) + "gnp.exe")).toBe("photognp.exe");
+  });
   it("caps at 120 characters and falls back to 'file'", () => {
     expect(Array.from(sanitizeFileName("é".repeat(200)))).toHaveLength(120);
     expect(sanitizeFileName("../")).toBe("file");

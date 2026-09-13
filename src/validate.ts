@@ -2,7 +2,7 @@ import { MAX_TEXT_CHARS } from "./limits";
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
 const PIN_RE = /^[A-Za-z0-9]{6,12}$/;
-const CONTROL_RE = /\p{Cc}/u;
+const CONTROL_RE = /[\p{Cc}\p{Cf}]/u;
 
 export function isSlug(v: unknown): v is string {
   return typeof v === "string" && SLUG_RE.test(v);

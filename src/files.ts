@@ -9,7 +9,7 @@ export const INLINE_IMAGE_TYPES: ReadonlySet<string> = new Set([
 
 export function sanitizeFileName(raw: string): string {
   const cleaned = raw
-    .replace(/\p{Cc}/gu, "")
+    .replace(/[\p{Cc}\p{Cf}]/gu, "")
     .replace(/[/\\]/g, "")
     .trim()
     .replace(/^\.+/, "")
