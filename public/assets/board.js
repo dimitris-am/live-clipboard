@@ -461,7 +461,7 @@ async function start() {
   if (me.expired || (me.status === 401 && me.data?.error === "Owner sign-in required")) return showExpired();
   if (me.ok) return enterBoard(me.data);
   if (me.status === 401) return showJoin();
-  if (me.status === 404) return showJoin();
+  if (me.status === 404) return showGone();
   toast(me.data?.error ?? "Could not load the room.");
 }
 
