@@ -48,7 +48,7 @@ function roomRow(room) {
     ]);
   }
 
-  const link = `${publicOrigin}/r/${room.slug}`;
+  const link = `${publicOrigin}/${room.slug}`;
   return el("tr", {}, [
     el("td", {}, [
       el("div", {}, [
@@ -60,7 +60,7 @@ function roomRow(room) {
       el("div", { class: "row-links" }, [
         el("a", { href: link, target: "_blank", rel: "noopener", text: "Public link" }),
         el("button", { type: "button", class: "link", text: "Copy link", onclick: () => copy(link) }),
-        el("a", { href: `/r/${room.slug}`, text: "Owner board" }),
+        el("a", { href: `/${room.slug}`, text: "Owner board" }),
       ]),
       managePanel(room),
     ]),

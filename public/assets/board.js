@@ -5,8 +5,8 @@ const INLINE_IMAGES = new Set(["image/png", "image/jpeg", "image/gif", "image/we
 const PING_INTERVAL_MS = 25_000;
 const PONG_TIMEOUT_MS = 10_000;
 
-const slug = decodeURIComponent(location.pathname.split("/")[2] ?? "");
-const base = `/r/${slug}`;
+const slug = decodeURIComponent(location.pathname.split("/")[1] ?? "");
+const base = `/${slug}`;
 const $ = (id) => document.getElementById(id);
 const composerText = $("composer-text");
 

@@ -4,6 +4,13 @@ const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
 const PIN_RE = /^[A-Za-z0-9]{6,12}$/;
 const CONTROL_RE = /[\p{Cc}\p{Cf}]/u;
 
+/** Room names that can never be created: they would collide with the router's own top-level paths. */
+export const RESERVED_SLUGS = new Set(["api", "assets"]);
+
+export function isReservedSlug(slug: string): boolean {
+  return RESERVED_SLUGS.has(slug);
+}
+
 export function isSlug(v: unknown): v is string {
   return typeof v === "string" && SLUG_RE.test(v);
 }

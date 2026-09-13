@@ -25,7 +25,7 @@ export type BoardContext = {
   /** Set on the admin door only, after authenticateOwner() succeeded. */
   owner: Owner | null;
   slug: string;
-  /** The path after /r/<slug>, e.g. "" or "/api/posts". */
+  /** The path after /<slug>, e.g. "" or "/api/posts". */
   rest: string;
 };
 

@@ -21,7 +21,7 @@ export function toWirePost(row: PostRow, slug: string, viewer: Actor): WirePost 
         name: row.file_name ?? "file",
         size: row.file_size ?? 0,
         type: row.file_type ?? "application/octet-stream",
-        url: `/r/${slug}/files/${row.id}`,
+        url: `/${slug}/files/${row.id}`,
       },
     };
   }

@@ -46,11 +46,11 @@ export function readCookie(request: Request, name: string): string | null {
 }
 
 export function sessionCookie(slug: string, sessionId: string, maxAgeSeconds: number): string {
-  return `${SESSION_COOKIE}=${sessionId}; Path=/r/${slug}; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
+  return `${SESSION_COOKIE}=${sessionId}; Path=/${slug}; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
 }
 
 export function clearedSessionCookie(slug: string): string {
-  return `${SESSION_COOKIE}=; Path=/r/${slug}; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+  return `${SESSION_COOKIE}=; Path=/${slug}; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 }
 
 export function contentSecurityPolicy(url: URL): string {

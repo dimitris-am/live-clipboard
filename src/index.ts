@@ -29,7 +29,7 @@ export default {
       return door === "admin" && owner ? handleAdminApi(request, env, owner, path) : notFound();
     }
 
-    const match = /^\/r\/([^/]+)(\/.*)?$/.exec(path);
+    const match = /^\/([^/]+)(\/.*)?$/.exec(path);
     if (match && isSlug(match[1])) {
       return handleBoard(request, env, { door, owner, slug: match[1], rest: match[2] ?? "" });
     }

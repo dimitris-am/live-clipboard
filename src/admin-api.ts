@@ -2,7 +2,7 @@ import { errorResponse, json, notFound, readJson } from "./http";
 import type { Owner } from "./owners";
 import { deletePrefix } from "./r2";
 import { ownerCred, type RoomInfo } from "./room/types";
-import { isSlug, parsePin, parseTitle } from "./validate";
+import { isReservedSlug, isSlug, parsePin, parseTitle } from "./validate";
 
 export type RoomListItem =
   | (RoomInfo & { deletionIncomplete: false })
@@ -44,6 +44,7 @@ export async function handleAdminApi(request: Request, env: Env, owner: Owner, p
     const title = parseTitle(body?.title);
     const pin = parsePin(body?.pin);
     if (!isSlug(slug)) return json({ error: "Slugs use lowercase letters, digits and hyphens, up to 40 characters" }, 400);
+    if (isReservedSlug(slug)) return json({ error: "That room name is reserved" }, 400);
     if (!title) return json({ error: "Titles must be 1 to 80 characters" }, 400);
     if (!pin) return json({ error: "PINs must be 6 to 12 letters or digits" }, 400);
     if (await isIndexed(env, slug)) return json({ error: "A room with that slug already exists" }, 409);

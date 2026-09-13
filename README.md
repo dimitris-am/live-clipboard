@@ -14,9 +14,11 @@ npm run dev
 ```
 
 - Admin door: http://127.0.0.1:8787/ (you are the owner named by `DEV_OWNER_EMAIL`)
-- Public door: http://localhost:8787/r/<slug>
+- Public door: http://localhost:8787/<slug>
 
 The Worker decides who you are **by hostname**, so use the two hostnames exactly as shown.
+
+Rooms live at the root of each host (`/<slug>`), so `api` and `assets` are reserved and can never be used as room names.
 
 ## Tests
 

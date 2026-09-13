@@ -406,3 +406,7 @@ Before 17 September 2026:
 - Prepare the HackMD fallback note.
 
 Showing the room URL and PIN on a deck slide is a change to the course deck in the `agna-prospectus` repository. It is a separate task, not part of this build.
+
+## Change log
+
+- 2026-09-13: rooms moved from /r/<slug> to /<slug> (session cookie Path and file URLs follow); "api" and "assets" are reserved room names. No redirect from the old paths.
