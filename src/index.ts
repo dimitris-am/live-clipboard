@@ -1,3 +1,4 @@
+import { handleAdminApi } from "./admin-api";
 import { handleBoard, type Door } from "./board-api";
 import { isSameOrigin, json, notFound, serveAsset, servePage } from "./http";
 import { authenticateOwner, type Owner } from "./owners";
@@ -24,7 +25,9 @@ export default {
     if (request.method === "GET" && path === "/") {
       return servePage(request, env.ASSETS, door === "admin" ? "admin.html" : "home.html");
     }
-    if (path.startsWith("/api/")) return notFound(); // Task 9 routes the admin API here.
+    if (path.startsWith("/api/")) {
+      return door === "admin" && owner ? handleAdminApi(request, env, owner, path) : notFound();
+    }
 
     const match = /^\/r\/([^/]+)(\/.*)?$/.exec(path);
     if (match && isSlug(match[1])) {
