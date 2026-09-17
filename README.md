@@ -62,6 +62,7 @@ Both lists must match. The Worker checks `OWNERS` even after Access lets someone
 
 ## During
 
+- **Who is here:** on the owner board, click **N online** in the header. It lists everyone who joined with the current PIN, connected people first; owners only.
 - **Leaked PIN:** if the PIN leaks (someone photographs the slide), use **Change PIN**. Everyone is signed out and rejoins with the new PIN.
 - **Projecting:** use browser zoom.
 

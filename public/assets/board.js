@@ -31,9 +31,40 @@ function show(view) {
   for (const id of ["join", "board", "expired", "gone"]) $(id).hidden = id !== view;
   const inRoom = view === "board";
   $("status").hidden = !inRoom;
-  $("online").hidden = !inRoom;
+  // Owners get the people dropdown in place of the plain count.
+  $("online").hidden = !inRoom || isOwner();
+  $("people").hidden = !inRoom || !isOwner();
+  if (!inRoom) $("people").open = false;
   $("you").hidden = !inRoom;
   $("leave").hidden = !inRoom || isOwner();
+}
+
+function setOnline(count) {
+  $("online").textContent = `${count} online`;
+  $("people-summary").textContent = `${count} online`;
+}
+
+let peopleLoad = 0;
+
+/** Fetches the owner's people list and renders it into the dropdown. Stale responses are ignored. */
+async function loadPeople() {
+  const list = $("people-list");
+  const token = ++peopleLoad;
+  if (list.childElementCount === 0) list.replaceChildren(el("li", { class: "muted", text: "Loading…" }));
+  const res = await api(`${base}/api/people`);
+  if (token !== peopleLoad) return;
+  if (!res.ok) {
+    list.replaceChildren(el("li", { class: "muted", text: res.data?.error ?? "Could not load the list." }));
+    return;
+  }
+  const items = res.data.map((person) =>
+    el("li", { class: person.online ? "online" : "offline" }, [
+      el("span", { class: "name", text: person.name }),
+      person.role === "owner" ? el("span", { class: "muted", text: "owner" }) : null,
+      person.online ? null : el("span", { class: "muted", text: "offline" }),
+    ]),
+  );
+  list.replaceChildren(...(items.length ? items : [el("li", { class: "muted", text: "Nobody has joined yet." })]));
 }
 
 function stopLive() {
@@ -178,7 +209,8 @@ function handle(msg) {
       state.you = msg.you;
       state.posts = new Map(msg.posts.map((post) => [post.id, post]));
       state.nodes.clear();
-      $("online").textContent = `${msg.online} online`;
+      setOnline(msg.online);
+      if ($("people").open) void loadPeople();
       renderRoom();
       renderPosts();
       break;
@@ -205,7 +237,8 @@ function handle(msg) {
       renderPosts();
       break;
     case "online":
-      $("online").textContent = `${msg.count} online`;
+      setOnline(msg.count);
+      if ($("people").open) void loadPeople();
       break;
   }
 }
@@ -479,6 +512,17 @@ $("leave").addEventListener("click", async () => {
 });
 
 $("reload").addEventListener("click", () => location.reload());
+
+$("people").addEventListener("toggle", () => {
+  if ($("people").open) void loadPeople();
+});
+document.addEventListener("click", (event) => {
+  const people = $("people");
+  if (people.open && !people.contains(event.target)) people.open = false;
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") $("people").open = false;
+});
 
 setInterval(() => {
   for (const node of document.querySelectorAll("time[data-time]")) {

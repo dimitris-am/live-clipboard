@@ -297,6 +297,20 @@ describe("owner API on the admin door", () => {
     const deleted = await adminFetch(`/api-owner/api/posts/${id}`, { method: "DELETE" });
     expect(deleted.status).toBe(204);
   });
+
+  it("lists the people in a room on the admin door only", async () => {
+    await makeRoom("api-people");
+    const cookie = await joinRoom("api-people", "Kristi");
+
+    const people = await adminFetch("/api-people/api/people");
+    expect(people.status).toBe(200);
+    expect(people.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(await people.json()).toEqual([{ name: "Kristi", role: "participant", online: false }]);
+
+    const asParticipant = await publicFetch("/api-people/api/people", { headers: { Cookie: cookie } });
+    expect(asParticipant.status).toBe(404);
+    await asParticipant.body?.cancel();
+  });
 });
 
 describe("files over HTTP", () => {

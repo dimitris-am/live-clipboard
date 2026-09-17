@@ -55,6 +55,9 @@ export type RoomInfo = {
 
 export type JoinOk = { sessionId: string; name: string; maxAgeSeconds: number };
 
+/** One line of the owner's people list. Participants who joined stay listed until their session ends. */
+export type Person = { name: string; role: Actor["role"]; online: boolean };
+
 export type WirePost = {
   id: string;
   kind: "text" | "file";

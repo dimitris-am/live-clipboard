@@ -70,6 +70,11 @@ export async function handleBoard(request: Request, env: Env, ctx: BoardContext)
     return me.ok ? json(me.value) : errorResponse(me);
   }
 
+  if (rest === "/api/people" && method === "GET" && door === "admin") {
+    const people = await room.people(cred);
+    return people.ok ? json(people.value) : errorResponse(people);
+  }
+
   if (rest === "/api/leave" && method === "POST" && door === "public") {
     await room.leave(cred);
     return new Response(null, { status: 204, headers: { "Set-Cookie": clearedSessionCookie(slug) } });

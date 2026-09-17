@@ -61,6 +61,23 @@ a { color: var(--accent); }
 .status[data-state="live"]::before { color: var(--live); }
 .muted { color: var(--muted); }
 .error { color: var(--danger); margin: 0; }
+
+/* Owner-only people dropdown. The list anchors to the sticky bar, so it stays on screen wherever the summary wraps. */
+details.people > summary { cursor: pointer; list-style: none; user-select: none; }
+details.people > summary::-webkit-details-marker { display: none; }
+details.people > summary::after { content: " ▾"; }
+details.people[open] > summary::after { content: " ▴"; }
+details.people > ul {
+  position: absolute; right: 1rem; top: 100%; z-index: 2; margin: 0.3rem 0 0; padding: 0.4rem 0; list-style: none;
+  min-width: 14rem; max-width: calc(100vw - 2rem); max-height: 60vh; overflow: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+}
+details.people li { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.9rem; white-space: nowrap; }
+details.people li::before { content: "●"; color: var(--border); }
+details.people li.online::before { color: var(--live); }
+details.people li.offline .name { color: var(--muted); }
+details.people li.muted::before { content: none; }
 .banner { padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--highlight); }
 .mono { font-family: var(--mono); }
 

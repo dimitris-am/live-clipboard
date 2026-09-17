@@ -18,6 +18,7 @@ import type {
   FileMeta,
   FileRef,
   JoinOk,
+  Person,
   PostRow,
   RoomInfo,
   RoomRow,
@@ -184,6 +185,38 @@ export class Room extends DurableObject<Env> {
       bytesUsed: room.bytes_used,
       createdAt: room.created_at,
     };
+  }
+
+  /** Everyone in the room for the owner: connected owners, then participants, connected ones first. */
+  people(cred: Cred): Result<Person[]> {
+    const gated = this.gate(cred, { owner: true });
+    if (!gated.ok) return gated;
+    const { room } = gated.value;
+
+    const connected = new Set<string>();
+    const owners = new Map<string, string>();
+    for (const ws of this.ctx.getWebSockets()) {
+      const actor = ws.deserializeAttachment() as Actor | null;
+      if (!actor) continue;
+      if (actor.role === "owner") owners.set(actor.email, actor.name);
+      else connected.add(actor.sessionId);
+    }
+
+    const sessions = this.sql
+      .exec<Pick<SessionRow, "id" | "name">>(
+        "SELECT id, name FROM sessions WHERE expires_at > ? AND pin_version = ? ORDER BY created_at ASC, rowid ASC",
+        Date.now(),
+        room.pin_version,
+      )
+      .toArray();
+    const participants: Person[] = sessions.map((s) => ({
+      name: s.name,
+      role: "participant",
+      online: connected.has(s.id),
+    }));
+    participants.sort((a, b) => Number(b.online) - Number(a.online));
+
+    return ok([...[...owners.values()].map((name): Person => ({ name, role: "owner", online: true })), ...participants]);
   }
 
   join(input: { pin: string; name: string; ip: string }): Result<JoinOk> {
