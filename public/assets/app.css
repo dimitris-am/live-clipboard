@@ -115,3 +115,6 @@ th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--borde
 details.manage { margin-top: 0.4rem; }
 details.manage form { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.5rem 0; }
 details.manage input { width: auto; flex: 1 1 10rem; }
+
+.site-foot { max-width: 760px; margin: 2rem auto 1rem; padding: 0 1rem; font-size: 0.8rem; text-align: center; }
+.site-foot a { color: inherit; }
