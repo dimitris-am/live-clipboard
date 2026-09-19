@@ -1,3 +1,4 @@
+import { exportFilename, renderMarkdown, resolveTimeZone } from "./export";
 import { downloadHeaders } from "./files";
 import {
   clearedSessionCookie,
@@ -110,6 +111,23 @@ export async function handleBoard(request: Request, env: Env, ctx: BoardContext)
       },
       cred,
     );
+  }
+
+  if (rest === "/export" && method === "GET") {
+    const data = await room.exportData(cred);
+    if (!data.ok) return errorResponse(data);
+    const url = new URL(request.url);
+    const timeZone = resolveTimeZone(url.searchParams.get("tz"));
+    const at = Date.now();
+    const markdown = renderMarkdown(data.value, { at, timeZone, origin: url.origin });
+    return new Response(markdown, {
+      headers: {
+        "Content-Type": "text/markdown; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${exportFilename(slug, at, timeZone)}"`,
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store",
+      },
+    });
   }
 
   const postMatch = POST_ROUTE.exec(rest);

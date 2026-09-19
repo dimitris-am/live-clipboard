@@ -36,6 +36,7 @@ function show(view) {
   $("people").hidden = !inRoom || !isOwner();
   if (!inRoom) $("people").open = false;
   $("you").hidden = !inRoom;
+  $("export").hidden = !inRoom;
   $("leave").hidden = !inRoom || isOwner();
 }
 
@@ -505,6 +506,9 @@ document.addEventListener("drop", (event) => {
   if (!canUpload()) return toast(uploadBlockedMessage());
   uploadFiles(files);
 });
+
+// The export is a plain download; the room is stamped in the reader's own timezone.
+$("export").href = `${base}/export?tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC")}`;
 
 $("leave").addEventListener("click", async () => {
   await api(`${base}/api/leave`, { method: "POST" });

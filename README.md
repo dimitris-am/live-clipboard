@@ -1,6 +1,6 @@
 # Live Clipboard
 
-A live shared clipboard for courses and talks. Participants join a room on `clip.dimitrismitsis.com` with a PIN and their name. Owners run rooms on `clip-admin.dimitrismitsis.com`, behind Cloudflare Access (email one-time PIN). Text, links and files appear for everyone in real time.
+A live shared clipboard for courses and talks. Participants join a room on `clip.dimitrismitsis.com` with a PIN and their name. Owners run rooms on `clip-admin.dimitrismitsis.com`, behind Cloudflare Access (email one-time PIN). Text, links and files appear for everyone in real time, and anyone in the room can download the whole room as one Markdown file.
 
 Design: `docs/superpowers/specs/2026-09-13-live-clipboard-design.md` · Plan: `docs/superpowers/plans/2026-09-13-live-clipboard.md` · Cloudflare values: `docs/deploy-notes.md`
 
@@ -64,11 +64,12 @@ Both lists must match. The Worker checks `OWNERS` even after Access lets someone
 
 - **Who is here:** on the owner board, click **N online** in the header. It lists everyone who joined with the current PIN, connected people first; owners only.
 - **Leaked PIN:** if the PIN leaks (someone photographs the slide), use **Change PIN**. Everyone is signed out and rejoins with the new PIN.
+- **Download:** everyone in the room gets a **Download** link in the header, which saves the room as one Markdown file: text posts as written, files as links, times in the reader's own timezone. File links only work while the reader is still joined.
 - **Projecting:** use browser zoom.
 
 ## After
 
-- **Archive** the room: it becomes read-only, and participants who still know the PIN can keep copying from it.
+- **Archive** the room: it becomes read-only, and participants who still know the PIN can keep copying and downloading from it.
 - **Delete** it when it is no longer needed. That removes every post and file. If file cleanup fails, the admin page shows "Deletion incomplete" with **Retry deletion**.
 
 ## Manual check after each deploy
@@ -77,6 +78,7 @@ Both lists must match. The Worker checks `OWNERS` even after Access lets someone
 2. **Join:** create a test room. Join it on a phone and on a laptop with different names.
 3. **Posting:** post text containing a link, copy it, paste a screenshot on the laptop, attach a photo on the phone, and download a file.
 4. **Owner controls:** pin a post from the owner board, then archive and unarchive the room.
-5. **Change PIN:** the phone returns to the join form.
-6. **Reconnect:** toggle Wi-Fi on the laptop. The board shows "Reconnecting…", then "Live".
-7. **Clean up:** delete the test room.
+5. **Download:** click **Download** on both the phone and the owner board, and open each file. Both hold every post, and a file link in the phone's copy still downloads.
+6. **Change PIN:** the phone returns to the join form.
+7. **Reconnect:** toggle Wi-Fi on the laptop. The board shows "Reconnecting…", then "Live".
+8. **Clean up:** delete the test room.

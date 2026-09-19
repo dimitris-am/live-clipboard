@@ -15,6 +15,7 @@ import { migrate } from "./schema";
 import type {
   Actor,
   Cred,
+  ExportData,
   FileMeta,
   FileRef,
   JoinOk,
@@ -217,6 +218,18 @@ export class Room extends DurableObject<Env> {
     participants.sort((a, b) => Number(b.online) - Number(a.online));
 
     return ok([...[...owners.values()].map((name): Person => ({ name, role: "owner", online: true })), ...participants]);
+  }
+
+  /** The whole room, oldest post first, for anyone the room already lets read it. */
+  exportData(cred: Cred): Result<ExportData> {
+    const gated = this.gate(cred);
+    if (!gated.ok) return gated;
+    const { room, actor } = gated.value;
+    const rows = this.sql.exec<PostRow>("SELECT * FROM posts ORDER BY created_at ASC, rowid ASC").toArray();
+    return ok({
+      room: { slug: room.slug, title: room.title },
+      posts: rows.map((row) => toWirePost(row, room.slug, actor)),
+    });
   }
 
   join(input: { pin: string; name: string; ip: string }): Result<JoinOk> {

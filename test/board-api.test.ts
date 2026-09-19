@@ -364,3 +364,63 @@ describe("files over HTTP", () => {
     await stranger.body?.cancel();
   });
 });
+
+describe("exporting a room", () => {
+  const withCookie = (cookie: string, body: unknown) => ({
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify(body),
+  });
+
+  it("hands a participant the room as a Markdown download, oldest post first", async () => {
+    await makeRoom("api-export");
+    const cookie = await joinRoom("api-export", "Kristi");
+    await publicFetch("/api-export/api/posts", withCookie(cookie, { text: "first thing" }));
+    await publicFetch("/api-export/api/posts", withCookie(cookie, { text: "second thing" }));
+
+    const res = await publicFetch("/api-export/export", { headers: { Cookie: cookie } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
+    expect(res.headers.get("Content-Disposition")).toMatch(
+      /^attachment; filename="api-export-\d{4}-\d{2}-\d{2}\.md"$/,
+    );
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+
+    const body = await res.text();
+    expect(body).toContain("# API room");
+    expect(body).toContain("### Kristi · ");
+    expect(body.indexOf("first thing")).toBeLessThan(body.indexOf("second thing"));
+  });
+
+  it("stamps times in the timezone the board sends, and falls back to UTC", async () => {
+    await makeRoom("api-export-tz");
+    const cookie = await joinRoom("api-export-tz");
+
+    const athens = await publicFetch("/api-export-tz/export?tz=Europe/Athens", { headers: { Cookie: cookie } });
+    expect(await athens.text()).toContain(" Europe/Athens · ");
+
+    const junk = await publicFetch("/api-export-tz/export?tz=Nowhere/Fake", { headers: { Cookie: cookie } });
+    expect(await junk.text()).toContain(" UTC · ");
+  });
+
+  it("exports for the owner through the admin door", async () => {
+    await makeRoom("api-export-owner");
+    const res = await adminFetch("/api-export-owner/export");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("_No posts yet._");
+  });
+
+  it("refuses anyone without a live session", async () => {
+    await makeRoom("api-export-401");
+    const stranger = await publicFetch("/api-export-401/export");
+    expect(stranger.status).toBe(401);
+    expect(await stranger.json()).toEqual({ error: "Join the room first" });
+
+    const ended = await publicFetch("/api-export-401/export", {
+      headers: { Cookie: `clip_session=${"a1b2".repeat(8)}` },
+    });
+    expect(ended.status).toBe(401);
+    expect(await ended.json()).toEqual({ error: "Your session has ended. Join again." });
+  });
+});

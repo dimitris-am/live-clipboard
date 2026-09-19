@@ -71,6 +71,9 @@ export type WirePost = {
   mine: boolean;
 };
 
+/** One room as src/export.ts renders it. Posts are chronological, oldest first. */
+export type ExportData = { room: { slug: string; title: string }; posts: WirePost[] };
+
 export type UploadGrant = { postId: string; r2Key: string };
 export type FileMeta = { postId: string; r2Key: string; name: string; size: number; type: string };
 export type FileRef = { r2Key: string; name: string; type: string };
